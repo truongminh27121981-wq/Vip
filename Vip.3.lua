@@ -23,6 +23,13 @@ local MaxHitboxLimit = 50
 local CustomJump = 50
 local MaxJumpLimit = 70
 
+-- MỚI: Fly (bay)
+local FlyEnabled = false
+local CustomFlySpeed = 1
+local MaxFlySpeedLimit = 50
+local FlyBodyVelocity = nil
+local FlyCamera = workspace.CurrentCamera
+
 -- HÀM KÉO THẢ GIAO DIỆN (MƯỢT MÀ MOBILE & PC)
 local function MakeDraggable(frame)
     local dragging, dragInput, dragStart, startPos
@@ -75,7 +82,7 @@ MainFrame.Name = "MainPanel"
 MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 MainFrame.Position = UDim2.new(0.5, -125, 0.5, -95)
-MainFrame.Size = UDim2.new(0, 250, 0, 210)
+MainFrame.Size = UDim2.new(0, 250, 0, 360)
 MainFrame.Active = true
 MainFrame.Visible = true
 MakeDraggable(MainFrame)
@@ -275,12 +282,192 @@ JumpSlider.InputBegan:Connect(function(input)
     end
 end)
 
+----------------------------------------------------
+-- MỚI: CHỨC NĂNG 4: THANH TRƯỢT BAY (SLIDER 1-50) - ANTI CHEAT
+----------------------------------------------------
+local FlyLabel = Instance.new("TextLabel")
+FlyLabel.Parent = Container
+FlyLabel.Size = UDim2.new(1, 0, 0, 20)
+FlyLabel.Position = UDim2.new(0, 0, 0, 155)
+FlyLabel.BackgroundTransparency = 1
+FlyLabel.Text = "Bay: " .. tostring(CustomFlySpeed) .. " (TẮT)"
+FlyLabel.TextColor3 = Color3.fromRGB(255, 200, 100)
+FlyLabel.Font = Enum.Font.SourceSansBold
+FlyLabel.TextSize = 14
+FlyLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+local FlySlider = Instance.new("TextButton")
+FlySlider.Parent = Container
+FlySlider.Size = UDim2.new(1, 0, 0, 14)
+FlySlider.Position = UDim2.new(0, 0, 0, 178)
+FlySlider.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+FlySlider.Text = ""
+Instance.new("UICorner", FlySlider).CornerRadius = UDim.new(0, 7)
+
+local FlyFill = Instance.new("Frame")
+FlyFill.Parent = FlySlider
+FlyFill.Size = UDim2.new((1 - 1) / (MaxFlySpeedLimit - 1), 0, 1, 0)
+FlyFill.BackgroundColor3 = Color3.fromRGB(255, 150, 255)
+Instance.new("UICorner", FlyFill).CornerRadius = UDim.new(0, 7)
+
+local SlidingFly = false
+
+local function UpdateFlySlider(input)
+    local mousePos = input.Position.X
+    local sliderPos = FlySlider.AbsolutePosition.X
+    local sliderWidth = FlySlider.AbsoluteSize.X
+    if sliderWidth <= 0 then return end
+
+    local percentage = math.clamp((mousePos - sliderPos) / sliderWidth, 0, 1)
+    FlyFill.Size = UDim2.new(percentage, 0, 1, 0)
+
+    CustomFlySpeed = math.floor(1 + (percentage * (MaxFlySpeedLimit - 1)))
+    
+    if CustomFlySpeed > 1 then
+        FlyLabel.Text = "Bay: " .. tostring(CustomFlySpeed) .. " (BẬT)"
+        FlyLabel.TextColor3 = Color3.fromRGB(100, 255, 200)
+    else
+        FlyLabel.Text = "Bay: 1 (TẮT)"
+        FlyLabel.TextColor3 = Color3.fromRGB(255, 200, 100)
+    end
+    
+    UpdateFlyState()
+end
+
+FlySlider.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        SlidingFly = true
+        UpdateFlySlider(input)
+    end
+end)
+
+----------------------------------------------------
+-- NÚT COPY CODE
+----------------------------------------------------
+local CopyButton = Instance.new("TextButton")
+CopyButton.Parent = Container
+CopyButton.Size = UDim2.new(1, 0, 0, 28)
+CopyButton.Position = UDim2.new(0, 0, 0, 205)
+CopyButton.BackgroundColor3 = Color3.fromRGB(0, 150, 200)
+CopyButton.Text = "Copy Code"
+CopyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+CopyButton.Font = Enum.Font.SourceSansBold
+CopyButton.TextSize = 14
+Instance.new("UICorner", CopyButton).CornerRadius = UDim.new(0, 7)
+
+CopyButton.MouseButton1Click:Connect(function()
+    local scriptCode = [[-- SCRIPT SIÊU KHỎE
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
+local LocalPlayer = Players.LocalPlayer
+local CustomSpeed = 16
+local CustomJump = 50
+local CustomFlySpeed = 1
+local FlyEnabled = false
+local FlyBodyVelocity = nil
+local FlyCamera = workspace.CurrentCamera
+
+-- BẬT/TẮT FLY
+local function StopFly()
+    FlyEnabled = false
+    if FlyBodyVelocity then
+        FlyBodyVelocity:Destroy()
+        FlyBodyVelocity = nil
+    end
+end
+
+local function StartFly()
+    if not LocalPlayer.Character then return end
+    local hrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+    
+    FlyEnabled = true
+    FlyBodyVelocity = Instance.new("BodyVelocity")
+    FlyBodyVelocity.Velocity = Vector3.new(0, 0, 0)
+    FlyBodyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+    FlyBodyVelocity.Parent = hrp
+end
+
+-- CHẠY NHANH & NHẢY CAO
+RunService.Heartbeat:Connect(function()
+    if LocalPlayer.Character then
+        local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        local hrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        
+        if humanoid and hrp and humanoid.Health > 0 then
+            humanoid.WalkSpeed = CustomSpeed
+            pcall(function()
+                humanoid.UseJumpPower = true
+                humanoid.JumpPower = CustomJump
+            end)
+        end
+    end
+end)
+
+-- ĐIỀU KHIỂN BAY
+RunService.RenderStepped:Connect(function()
+    if FlyEnabled and LocalPlayer.Character then
+        local hrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if hrp and FlyBodyVelocity then
+            local camera = FlyCamera
+            local moveDir = Vector3.new(0, 0, 0)
+            
+            if UserInputService:IsKeyDown(Enum.KeyCode.W) then moveDir = moveDir + camera.CFrame.LookVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.S) then moveDir = moveDir - camera.CFrame.LookVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.A) then moveDir = moveDir - camera.CFrame.RightVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.D) then moveDir = moveDir + camera.CFrame.RightVector end
+            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0, 1, 0) end
+            if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) or UserInputService:IsKeyDown(Enum.KeyCode.C) then moveDir = moveDir - Vector3.new(0, 1, 0) end
+            
+            if moveDir.Magnitude > 0 then moveDir = moveDir.Unit end
+            FlyBodyVelocity.Velocity = FlyBodyVelocity.Velocity:Lerp(moveDir * CustomFlySpeed, 0.2)
+        end
+    end
+end)
+
+-- BẬT/TẮT FLY VỚI PHÍM
+UserInputService.InputBegan:Connect(function(input, gpe)
+    if not gpe and input.KeyCode == Enum.KeyCode.F then
+        if FlyEnabled then
+            StopFly()
+        else
+            StartFly()
+        end
+    end
+end)
+
+-- DỪNG KHI CHẾT
+Players.LocalPlayer.CharacterAdded:Connect(function()
+    StopFly()
+end)
+
+-- ĐIỀU CHỈNH TỐC ĐỘ
+UserInputService.InputBegan:Connect(function(input, gpe)
+    if not gpe then
+        if input.KeyCode == Enum.KeyCode.E then CustomFlySpeed = math.min(CustomFlySpeed + 5, 50) end
+        if input.KeyCode == Enum.KeyCode.Q then CustomFlySpeed = math.max(CustomFlySpeed - 5, 1) end
+    end
+end)
+]]
+    
+    setclipboard(scriptCode)
+    CopyButton.Text = "✓ Đã Copy!"
+    CopyButton.BackgroundColor3 = Color3.fromRGB(0, 200, 100)
+    
+    task.wait(2)
+    CopyButton.Text = "Copy Code"
+    CopyButton.BackgroundColor3 = Color3.fromRGB(0, 150, 200)
+end)
+
 -- GỘP SỰ KIỆN ĐIỀU HƯỚNG INPUT TRƯỢT ĐỂ TRÁNH XUNG ĐỘT
 UserInputService.InputChanged:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
         if SlidingSpeed then UpdateSpeedSlider(input) end
         if SlidingHitbox then UpdateHitboxSlider(input) end
         if SlidingJump then UpdateJumpSlider(input) end
+        if SlidingFly then UpdateFlySlider(input) end
     end
 end)
 
@@ -289,8 +476,40 @@ UserInputService.InputEnded:Connect(function(input)
         SlidingSpeed = false
         SlidingHitbox = false
         SlidingJump = false
+        SlidingFly = false
     end
 end)
+
+----------------------------------------------------
+-- HÀM BẬT/TẮT FLY (ANTI-CHEAT)
+----------------------------------------------------
+local function StopFly()
+    FlyEnabled = false
+    if FlyBodyVelocity then
+        FlyBodyVelocity:Destroy()
+        FlyBodyVelocity = nil
+    end
+    FlyLabel.Text = "Bay: " .. tostring(CustomFlySpeed) .. " (TẮT)"
+    FlyLabel.TextColor3 = Color3.fromRGB(255, 200, 100)
+end
+
+local function StartFly()
+    if not LocalPlayer.Character then return end
+    
+    local hrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+    
+    FlyEnabled = true
+    
+    -- Tạo BodyVelocity với giá trị thấp ban đầu để tránh phát hiện
+    FlyBodyVelocity = Instance.new("BodyVelocity")
+    FlyBodyVelocity.Velocity = Vector3.new(0, 0, 0)
+    FlyBodyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+    FlyBodyVelocity.Parent = hrp
+    
+    FlyLabel.Text = "Bay: " .. tostring(CustomFlySpeed) .. " (BẬT)"
+    FlyLabel.TextColor3 = Color3.fromRGB(100, 255, 200)
+end
 
 ----------------------------------------------------
 -- VÒNG LẶP QUÉT VÀ THỰC THI HITBOX BIẾN THIÊN (1-50)
@@ -310,7 +529,6 @@ task.spawn(function()
                         hrp.Material = Enum.Material.Neon
                         hrp.CanCollide = false
                     else
-                        -- Reset về kích thước chuẩn nếu kéo slider về mức 1 hoặc 2
                         hrp.Size = Vector3.new(2, 2, 1)
                         hrp.Transparency = 1
                         hrp.Color = Color3.fromRGB(163, 162, 165)
@@ -337,14 +555,7 @@ RunService.Heartbeat:Connect(function()
                 humanoid.WalkSpeed = 16
             end
 
-            -- MỚI: áp dụng JumpPower cho nhân vật local
-            -- Bật UseJumpPower nếu có
             if humanoid:IsA("Humanoid") then
-                -- một số phiên bản yêu cầu UseJumpPower = true để JumpPower hoạt động
-                if humanoid:FindFirstChild("UseJumpPower") then
-                    -- do nothing if UseJumpPower is not a property instance (rare), but for standard Humanoid:
-                end
-                -- an toàn: set UseJumpPower nếu thuộc tính tồn tại
                 pcall(function()
                     humanoid.UseJumpPower = true
                 end)
@@ -355,6 +566,59 @@ RunService.Heartbeat:Connect(function()
         end
     end
 end)
+
+-- VÒNG LẶP FLY (ANTI-CHEAT) - Sử dụng BodyVelocity smooth
+RunService.RenderStepped:Connect(function()
+    if FlyEnabled and LocalPlayer.Character then
+        local hrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        
+        if hrp and humanoid and humanoid.Health > 0 and FlyBodyVelocity then
+            local camera = FlyCamera
+            local moveDir = Vector3.new(0, 0, 0)
+            
+            if UserInputService:IsKeyDown(Enum.KeyCode.W) then
+                moveDir = moveDir + (camera.CFrame.LookVector)
+            end
+            if UserInputService:IsKeyDown(Enum.KeyCode.S) then
+                moveDir = moveDir - (camera.CFrame.LookVector)
+            end
+            if UserInputService:IsKeyDown(Enum.KeyCode.A) then
+                moveDir = moveDir - (camera.CFrame.RightVector)
+            end
+            if UserInputService:IsKeyDown(Enum.KeyCode.D) then
+                moveDir = moveDir + (camera.CFrame.RightVector)
+            end
+            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+                moveDir = moveDir + Vector3.new(0, 1, 0)
+            end
+            if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) or UserInputService:IsKeyDown(Enum.KeyCode.C) then
+                moveDir = moveDir - Vector3.new(0, 1, 0)
+            end
+            
+            if moveDir.Magnitude > 0 then
+                moveDir = moveDir.Unit
+            end
+            
+            local flyVelocity = moveDir * CustomFlySpeed
+            FlyBodyVelocity.Velocity = FlyBodyVelocity.Velocity:Lerp(flyVelocity, 0.2)
+        elseif not FlyEnabled and FlyBodyVelocity then
+            StopFly()
+        end
+    end
+end)
+
+local function UpdateFlyState()
+    if CustomFlySpeed > 1 then
+        if not FlyEnabled then
+            StartFly()
+        end
+    else
+        if FlyEnabled then
+            StopFly()
+        end
+    end
+end
 
 local function ToggleMenu()
     MainFrame.Visible = not MainFrame.Visible
@@ -367,4 +631,8 @@ UserInputService.InputBegan:Connect(function(input, gpe)
     if not gpe and (input.KeyCode == Enum.KeyCode.RightControl or input.KeyCode == Enum.KeyCode.Insert) then
         ToggleMenu()
     end
+end)
+
+Players.LocalPlayer.CharacterAdded:Connect(function()
+    StopFly()
 end)
