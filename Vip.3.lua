@@ -23,13 +23,6 @@ local MaxHitboxLimit = 50
 local CustomJump = 50
 local MaxJumpLimit = 70
 
--- MỚI: Fly (bay)
-local FlyEnabled = false
-local CustomFlySpeed = 1
-local MaxFlySpeedLimit = 50
-local FlyBodyVelocity = nil
-local FlyCamera = workspace.CurrentCamera
-
 -- HÀM KÉO THẢ GIAO DIỆN (MƯỢT MÀ MOBILE & PC)
 local function MakeDraggable(frame)
     local dragging, dragInput, dragStart, startPos
@@ -283,65 +276,6 @@ JumpSlider.InputBegan:Connect(function(input)
 end)
 
 ----------------------------------------------------
--- MỚI: CHỨC NĂNG 4: THANH TRƯỢT BAY (SLIDER 1-50) - ANTI CHEAT
-----------------------------------------------------
-local FlyLabel = Instance.new("TextLabel")
-FlyLabel.Parent = Container
-FlyLabel.Size = UDim2.new(1, 0, 0, 20)
-FlyLabel.Position = UDim2.new(0, 0, 0, 155)
-FlyLabel.BackgroundTransparency = 1
-FlyLabel.Text = "Bay: " .. tostring(CustomFlySpeed) .. " (TẮT)"
-FlyLabel.TextColor3 = Color3.fromRGB(255, 200, 100)
-FlyLabel.Font = Enum.Font.SourceSansBold
-FlyLabel.TextSize = 14
-FlyLabel.TextXAlignment = Enum.TextXAlignment.Left
-
-local FlySlider = Instance.new("TextButton")
-FlySlider.Parent = Container
-FlySlider.Size = UDim2.new(1, 0, 0, 14)
-FlySlider.Position = UDim2.new(0, 0, 0, 178)
-FlySlider.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-FlySlider.Text = ""
-Instance.new("UICorner", FlySlider).CornerRadius = UDim.new(0, 7)
-
-local FlyFill = Instance.new("Frame")
-FlyFill.Parent = FlySlider
-FlyFill.Size = UDim2.new((1 - 1) / (MaxFlySpeedLimit - 1), 0, 1, 0)
-FlyFill.BackgroundColor3 = Color3.fromRGB(255, 150, 255)
-Instance.new("UICorner", FlyFill).CornerRadius = UDim.new(0, 7)
-
-local SlidingFly = false
-
-local function UpdateFlySlider(input)
-    local mousePos = input.Position.X
-    local sliderPos = FlySlider.AbsolutePosition.X
-    local sliderWidth = FlySlider.AbsoluteSize.X
-    if sliderWidth <= 0 then return end
-
-    local percentage = math.clamp((mousePos - sliderPos) / sliderWidth, 0, 1)
-    FlyFill.Size = UDim2.new(percentage, 0, 1, 0)
-
-    CustomFlySpeed = math.floor(1 + (percentage * (MaxFlySpeedLimit - 1)))
-    
-    if CustomFlySpeed > 1 then
-        FlyLabel.Text = "Bay: " .. tostring(CustomFlySpeed) .. " (BẬT)"
-        FlyLabel.TextColor3 = Color3.fromRGB(100, 255, 200)
-    else
-        FlyLabel.Text = "Bay: 1 (TẮT)"
-        FlyLabel.TextColor3 = Color3.fromRGB(255, 200, 100)
-    end
-    
-    UpdateFlyState()
-end
-
-FlySlider.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        SlidingFly = true
-        UpdateFlySlider(input)
-    end
-end)
-
-----------------------------------------------------
 -- NÚT COPY CODE
 ----------------------------------------------------
 local CopyButton = Instance.new("TextButton")
@@ -467,7 +401,6 @@ UserInputService.InputChanged:Connect(function(input)
         if SlidingSpeed then UpdateSpeedSlider(input) end
         if SlidingHitbox then UpdateHitboxSlider(input) end
         if SlidingJump then UpdateJumpSlider(input) end
-        if SlidingFly then UpdateFlySlider(input) end
     end
 end)
 
@@ -476,40 +409,8 @@ UserInputService.InputEnded:Connect(function(input)
         SlidingSpeed = false
         SlidingHitbox = false
         SlidingJump = false
-        SlidingFly = false
     end
 end)
-
-----------------------------------------------------
--- HÀM BẬT/TẮT FLY (ANTI-CHEAT)
-----------------------------------------------------
-local function StopFly()
-    FlyEnabled = false
-    if FlyBodyVelocity then
-        FlyBodyVelocity:Destroy()
-        FlyBodyVelocity = nil
-    end
-    FlyLabel.Text = "Bay: " .. tostring(CustomFlySpeed) .. " (TẮT)"
-    FlyLabel.TextColor3 = Color3.fromRGB(255, 200, 100)
-end
-
-local function StartFly()
-    if not LocalPlayer.Character then return end
-    
-    local hrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-    if not hrp then return end
-    
-    FlyEnabled = true
-    
-    -- Tạo BodyVelocity với giá trị thấp ban đầu để tránh phát hiện
-    FlyBodyVelocity = Instance.new("BodyVelocity")
-    FlyBodyVelocity.Velocity = Vector3.new(0, 0, 0)
-    FlyBodyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-    FlyBodyVelocity.Parent = hrp
-    
-    FlyLabel.Text = "Bay: " .. tostring(CustomFlySpeed) .. " (BẬT)"
-    FlyLabel.TextColor3 = Color3.fromRGB(100, 255, 200)
-end
 
 ----------------------------------------------------
 -- VÒNG LẶP QUÉT VÀ THỰC THI HITBOX BIẾN THIÊN (1-50)
@@ -567,59 +468,6 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
--- VÒNG LẶP FLY (ANTI-CHEAT) - Sử dụng BodyVelocity smooth
-RunService.RenderStepped:Connect(function()
-    if FlyEnabled and LocalPlayer.Character then
-        local hrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-        local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-        
-        if hrp and humanoid and humanoid.Health > 0 and FlyBodyVelocity then
-            local camera = FlyCamera
-            local moveDir = Vector3.new(0, 0, 0)
-            
-            if UserInputService:IsKeyDown(Enum.KeyCode.W) then
-                moveDir = moveDir + (camera.CFrame.LookVector)
-            end
-            if UserInputService:IsKeyDown(Enum.KeyCode.S) then
-                moveDir = moveDir - (camera.CFrame.LookVector)
-            end
-            if UserInputService:IsKeyDown(Enum.KeyCode.A) then
-                moveDir = moveDir - (camera.CFrame.RightVector)
-            end
-            if UserInputService:IsKeyDown(Enum.KeyCode.D) then
-                moveDir = moveDir + (camera.CFrame.RightVector)
-            end
-            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
-                moveDir = moveDir + Vector3.new(0, 1, 0)
-            end
-            if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) or UserInputService:IsKeyDown(Enum.KeyCode.C) then
-                moveDir = moveDir - Vector3.new(0, 1, 0)
-            end
-            
-            if moveDir.Magnitude > 0 then
-                moveDir = moveDir.Unit
-            end
-            
-            local flyVelocity = moveDir * CustomFlySpeed
-            FlyBodyVelocity.Velocity = FlyBodyVelocity.Velocity:Lerp(flyVelocity, 0.2)
-        elseif not FlyEnabled and FlyBodyVelocity then
-            StopFly()
-        end
-    end
-end)
-
-local function UpdateFlyState()
-    if CustomFlySpeed > 1 then
-        if not FlyEnabled then
-            StartFly()
-        end
-    else
-        if FlyEnabled then
-            StopFly()
-        end
-    end
-end
-
 local function ToggleMenu()
     MainFrame.Visible = not MainFrame.Visible
 end
@@ -633,6 +481,4 @@ UserInputService.InputBegan:Connect(function(input, gpe)
     end
 end)
 
-Players.LocalPlayer.CharacterAdded:Connect(function()
-    StopFly()
-end)
+-- Players.LocalPlayer.CharacterAdded StopFly removed as fly feature was deleted
