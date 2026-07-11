@@ -75,7 +75,7 @@ MainFrame.Name = "MainPanel"
 MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 MainFrame.Position = UDim2.new(0.5, -125, 0.5, -95)
-MainFrame.Size = UDim2.new(0, 250, 0, 360)
+MainFrame.Size = UDim2.new(0, 250, 0, 400)
 MainFrame.Active = true
 MainFrame.Visible = true
 MakeDraggable(MainFrame)
@@ -395,6 +395,136 @@ end)
     CopyButton.BackgroundColor3 = Color3.fromRGB(0, 150, 200)
 end)
 
+----------------------------------------------------
+-- NÚT BẤM NÉ - AUTO NÉ LÊN ĐẦU & LƯỚT BÁM ĐUÔI MƯỢT MÀ CHUẨN TỐC ĐỘ 30
+----------------------------------------------------
+
+-- CẤU HÌNH TINH CHỈNH LẠI CƠ CHẾ LƯỚT
+local ScanDistance = 6.5       -- Khoảng cách sát người để kích hoạt né (studs)
+local TeleportHeight = 7       -- Chiều cao biến lên trên đỉnh đầu đối thủ để né đòn
+local ReturnDelay = 0.15       -- Thời gian lơ lửng trên đầu trước khi đáp xuống
+local PursueDistance = 3.5     -- Khoảng cách giữ vị trí sát sau lưng đối thủ
+local SpeedStudsPerSecond = 30 -- TỐC ĐỘ DI CHUYỂN CHUẨN 30 STUDS/GIÂY (LƯỚT MƯỢT)
+
+local IsDodging = false
+local DodgeEnabled = false
+local TargetPlayer = nil
+
+-- NÚT BẬT/TẮT NÉ
+local DodgeButton = Instance.new("TextButton")
+DodgeButton.Parent = Container
+DodgeButton.Size = UDim2.new(1, 0, 0, 28)
+DodgeButton.Position = UDim2.new(0, 0, 0, 240)
+DodgeButton.BackgroundColor3 = Color3.fromRGB(220, 53, 69)
+DodgeButton.Text = "Bám Né: OFF"
+DodgeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+DodgeButton.Font = Enum.Font.SourceSansBold
+DodgeButton.TextSize = 14
+Instance.new("UICorner", DodgeButton).CornerRadius = UDim.new(0, 7)
+
+DodgeButton.MouseButton1Click:Connect(function()
+    DodgeEnabled = not DodgeEnabled
+    if DodgeEnabled then
+        DodgeButton.Text = "Bám Né: ON"
+        DodgeButton.BackgroundColor3 = Color3.fromRGB(40, 167, 69)
+    else
+        DodgeButton.Text = "Bám Né: OFF"
+        DodgeButton.BackgroundColor3 = Color3.fromRGB(220, 53, 69)
+        IsDodging = false
+        TargetPlayer = nil
+    end
+end)
+
+-- HÀM QUÉT NHẬN DIỆN ĐÒN ĐÁNH CẬN CHIẾN
+local function isEnemyAttacking(enemyChar)
+    local humanoid = enemyChar:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        local playingTracks = humanoid:GetPlayingAnimationTracks()
+        if #playingTracks > 1 then 
+            return true
+        end
+        local hrp = enemyChar:FindFirstChild("HumanoidRootPart")
+        if hrp and hrp.AssemblyLinearVelocity.Magnitude > 9 then
+            return true
+        end
+    end
+    return false
+end
+
+-- VÒNG LẶP XỬ LÝ BIẾN LÊN ĐẦU VÀ LƯỚT BÁM ĐUÔI MƯỢT MÀ
+RunService.Heartbeat:Connect(function(deltaTime)
+    if not DodgeEnabled or not LocalPlayer.Character then return end
+    
+    local myHrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    local myHumanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+    if not myHrp or not myHumanoid or myHumanoid.Health <= 0 then 
+        TargetPlayer = nil 
+        return 
+    end
+    
+    -- PHẦN A: ĐỨNG KẾ BÊN RA ĐÒN -> BIẾN LÊN TRÊN ĐẦU ĐỐI THỦ
+    if not IsDodging then
+        for _, player in ipairs(Players:GetPlayers()) do
+            if player ~= LocalPlayer and player.Character then
+                local enemyHrp = player.Character:FindFirstChild("HumanoidRootPart")
+                local enemyHumanoid = player.Character:FindFirstChildOfClass("Humanoid")
+                
+                if enemyHrp and enemyHumanoid and enemyHumanoid.Health > 0 then
+                    local distance = (myHrp.Position - enemyHrp.Position).Magnitude
+                    
+                    if distance <= ScanDistance and isEnemyAttacking(player.Character) then
+                        IsDodging = true
+                        TargetPlayer = player 
+                        
+                        local originalCFrame = myHrp.CFrame
+                        myHrp.CFrame = enemyHrp.CFrame * CFrame.new(0, TeleportHeight, 0)
+                        
+                        task.wait(ReturnDelay)
+                        
+                        if LocalPlayer.Character and myHrp and myHumanoid.Health > 0 then
+                            myHrp.CFrame = originalCFrame
+                        end
+                        
+                        IsDodging = false
+                        break
+                    end
+                end
+            end
+        end
+    end
+    
+    -- PHẦN B: CƠ CHẾ LƯỚT TOẠ ĐỘ MƯỢT MÀ CHUẨN TỐC ĐỘ 30 THEO THỜI GIAN THỰC
+    if TargetPlayer and TargetPlayer.Character and not IsDodging then
+        local tHrp = TargetPlayer.Character:FindFirstChild("HumanoidRootPart")
+        local tHumanoid = TargetPlayer.Character:FindFirstChildOfClass("Humanoid")
+        
+        if not tHrp or not tHumanoid or tHumanoid.Health <= 0 then
+            TargetPlayer = nil
+            return
+        end
+        
+        local targetBehindPos = tHrp.Position - (tHrp.CFrame.LookVector * PursueDistance)
+        local currentPos = myHrp.Position
+        local tDistance = (currentPos - targetBehindPos).Magnitude
+        
+        -- Nếu khoảng cách lệch xa vị trí sau lưng đối thủ
+        if tDistance > 0.5 then
+            -- Tính toán bước di chuyển mượt dựa trên deltaTime để cố định chuẩn tốc độ 30 studs/s
+            local maxMove = SpeedStudsPerSecond * deltaTime
+            local moveStep = math.min(maxMove, tDistance)
+            local moveDirection = (targetBehindPos - currentPos).Unit
+            
+            local newPosition = currentPos + (moveDirection * moveStep)
+            
+            -- Cập nhật tọa độ CFrame trực tiếp và xoay mặt hướng thẳng vào đối thủ
+            myHrp.CFrame = CFrame.new(newPosition, Vector3.new(tHrp.Position.X, newPosition.Y, tHrp.Position.Z))
+            
+            -- Triệt tiêu lực rơi tự do vật lý cũ để không bị khựng giật khi đang lướt theo
+            myHrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+        end
+    end
+end)
+
 -- GỘP SỰ KIỆN ĐIỀU HƯỚNG INPUT TRƯỢT ĐỂ TRÁNH XUNG ĐỘT
 UserInputService.InputChanged:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
@@ -480,3 +610,5 @@ UserInputService.InputBegan:Connect(function(input, gpe)
         ToggleMenu()
     end
 end)
+
+print("✓ Script vip.3.lua + Bám Né Mượt 30 studs/s đã sẵn sàng!")
