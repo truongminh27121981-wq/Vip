@@ -464,7 +464,10 @@ DodgeButton.MouseButton1Click:Connect(function()
     end
 end)
 
--- THÊM NÚT COMBAT M���Y KID (KHI NHẤN SẼ TẠO MENU AUTO COMBAT)
+-- Khởi tạo biến auto click chung
+_G.IsAutoClick = false
+
+-- NÚT COMBAT Mấy KID (KHI NHẤN SẼ BẬT/TẮT AUTO COMBAT)
 local CombatMenuButton = Instance.new("TextButton")
 CombatMenuButton.Parent = Container
 CombatMenuButton.Size = UDim2.new(1, 0, 0, 28)
@@ -477,89 +480,35 @@ CombatMenuButton.TextSize = 14
 Instance.new("UICorner", CombatMenuButton).CornerRadius = UDim.new(0, 7)
 
 CombatMenuButton.MouseButton1Click:Connect(function()
-    -- Tạo menu Auto Combat do bạn cung cấp. Nếu đã tồn tại, sẽ hủy trước.
-    task.spawn(function()
-        pcall(function()
-            _G.IsAutoClick = false
-            local CombatRemote = game:GetService("ReplicatedStorage"):WaitForChild("CombatRemote")
-
-            -- 2. TẠO GIAO DIỆN ĐỒ HỌA (GUI)
-            local PlayersInner = game:GetService("Players")
-            local LocalPlayerInner = PlayersInner.LocalPlayer
-            local PlayerGui = LocalPlayerInner:WaitForChild("PlayerGui")
-
-            if PlayerGui:FindFirstChild("SimpleCombatMenu") then
-                PlayerGui.SimpleCombatMenu:Destroy()
+    _G.IsAutoClick = not _G.IsAutoClick
+    if _G.IsAutoClick then
+        CombatMenuButton.Text = "Auto Combat: ON"
+        CombatMenuButton.BackgroundColor3 = Color3.fromRGB(0, 150, 0)
+        task.spawn(function()
+            local success, CombatRemote = pcall(function()
+                return game:GetService("ReplicatedStorage"):WaitForChild("CombatRemote")
+            end)
+            if not CombatRemote then
+                -- không tìm thấy CombatRemote, thoát vòng lặp
+                _G.IsAutoClick = false
+                CombatMenuButton.Text = "Combat Mấy Kid"
+                CombatMenuButton.BackgroundColor3 = Color3.fromRGB(120, 15, 15)
+                return
             end
 
-            local ScreenGuiInner = Instance.new("ScreenGui")
-            ScreenGuiInner.Name = "SimpleCombatMenu"
-            ScreenGuiInner.ResetOnSpawn = false
-            ScreenGuiInner.Parent = PlayerGui
-
-            local MainFrameInner = Instance.new("Frame")
-            MainFrameInner.Name = "MainFrame"
-            MainFrameInner.Size = UDim2.new(0, 200, 0, 100)
-            MainFrameInner.Position = UDim2.new(0.5, -100, 0.4, -50)
-            MainFrameInner.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-            MainFrameInner.BorderSizePixel = 2
-            MainFrameInner.BorderColor3 = Color3.fromRGB(255, 0, 0)
-            MainFrameInner.Active = true
-            MainFrameInner.Parent = ScreenGuiInner
-
-            local Title = Instance.new("TextLabel")
-            Title.Name = "Title"
-            Title.Size = UDim2.new(1, 0, 0, 30)
-            Title.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-            Title.Text = "COMBAT MENU"
-            Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-            Title.Font = Enum.Font.SourceSansBold
-            Title.TextSize = 16
-            Title.Parent = MainFrameInner
-
-            local ToggleButtonInner = Instance.new("TextButton")
-            ToggleButtonInner.Name = "ToggleButton"
-            ToggleButtonInner.Size = UDim2.new(0.8, 0, 0, 40)
-            ToggleButtonInner.Position = UDim2.new(0.1, 0, 0.45, 0)
-            ToggleButtonInner.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
-            ToggleButtonInner.Text = "Auto Click: OFF"
-            ToggleButtonInner.TextColor3 = Color3.fromRGB(255, 255, 255)
-            ToggleButtonInner.Font = Enum.Font.SourceSansBold
-            ToggleButtonInner.TextSize = 18
-            ToggleButtonInner.Parent = MainFrameInner
-
-            local UICorner = Instance.new("UICorner")
-            UICorner.CornerRadius = UDim.new(0, 8)
-            UICorner.Parent = ToggleButtonInner
-
-            -- Vòng lặp Auto Combat
-            task.spawn(function()
-                while true do
-                    if _G.IsAutoClick then
-                        pcall(function()
-                            CombatRemote:FireServer("M1")
-                            task.wait(0.1)
-                            CombatRemote:FireServer("M2")
-                        end)
-                    end
+            while _G.IsAutoClick do
+                pcall(function()
+                    CombatRemote:FireServer("M1")
                     task.wait(0.1)
-                end
-            end)
-
-            ToggleButtonInner.MouseButton1Click:Connect(function()
-                _G.IsAutoClick = not _G.IsAutoClick
-                if _G.IsAutoClick then
-                    ToggleButtonInner.Text = "Auto Click: ON"
-                    ToggleButtonInner.BackgroundColor3 = Color3.fromRGB(0, 150, 0)
-                else
-                    ToggleButtonInner.Text = "Auto Click: OFF"
-                    ToggleButtonInner.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
-                end
-            end)
-
-            print("Menu Auto Combat đã được tải thành công!")
+                    CombatRemote:FireServer("M2")
+                end)
+                task.wait(0.1)
+            end
         end)
-    end)
+    else
+        CombatMenuButton.Text = "Combat Mấy Kid"
+        CombatMenuButton.BackgroundColor3 = Color3.fromRGB(120, 15, 15)
+    end
 end)
 
 -- HÀM QUÉT NHẬN DIỆN ĐÒN ĐÁNH CẬN CHIẾN
