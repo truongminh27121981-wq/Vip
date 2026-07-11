@@ -23,6 +23,10 @@ local MaxHitboxLimit = 50
 local CustomJump = 50
 local MaxJumpLimit = 70
 
+-- MỚI: Aura Spam
+local AuraSpamEnabled = false
+local ActionRemote = workspace:FindFirstChild("ActionRemote") or game:GetService("ReplicatedStorage"):FindFirstChild("ActionRemote")
+
 -- HÀM KÉO THẢ GIAO DIỆN (MƯỢT MÀ MOBILE & PC)
 local function MakeDraggable(frame)
     local dragging, dragInput, dragStart, startPos
@@ -75,7 +79,7 @@ MainFrame.Name = "MainPanel"
 MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 MainFrame.Position = UDim2.new(0.5, -125, 0.5, -95)
-MainFrame.Size = UDim2.new(0, 250, 0, 400)
+MainFrame.Size = UDim2.new(0, 250, 0, 540)
 MainFrame.Active = true
 MainFrame.Visible = true
 MakeDraggable(MainFrame)
@@ -226,7 +230,7 @@ HitboxSlider.InputBegan:Connect(function(input)
 end)
 
 ----------------------------------------------------
--- MỚI: CHỨC NĂNG 3: THANH TRƯỢT ĐỘ NHẢY (SLIDER 1-70)
+-- CHỨC NĂNG 3: THANH TRƯỢT ĐỘ NHẢY (SLIDER 1-70)
 ----------------------------------------------------
 local JumpLabel = Instance.new("TextLabel")
 JumpLabel.Parent = Container
@@ -281,7 +285,7 @@ end)
 local CopyButton = Instance.new("TextButton")
 CopyButton.Parent = Container
 CopyButton.Size = UDim2.new(1, 0, 0, 28)
-CopyButton.Position = UDim2.new(0, 0, 0, 205)
+CopyButton.Position = UDim2.new(0, 0, 0, 160)
 CopyButton.BackgroundColor3 = Color3.fromRGB(0, 150, 200)
 CopyButton.Text = "Copy Code"
 CopyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -396,6 +400,31 @@ end)
 end)
 
 ----------------------------------------------------
+-- NÚT AURA SPAM (MỚI)
+----------------------------------------------------
+local AuraButton = Instance.new("TextButton")
+AuraButton.Parent = Container
+AuraButton.Size = UDim2.new(1, 0, 0, 28)
+AuraButton.Position = UDim2.new(0, 0, 0, 195)
+AuraButton.BackgroundColor3 = Color3.fromRGB(220, 53, 69)
+AuraButton.Text = "AURA SPAM: OFF"
+AuraButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+AuraButton.Font = Enum.Font.SourceSansBold
+AuraButton.TextSize = 14
+Instance.new("UICorner", AuraButton).CornerRadius = UDim.new(0, 7)
+
+AuraButton.MouseButton1Click:Connect(function()
+    AuraSpamEnabled = not AuraSpamEnabled
+    if AuraSpamEnabled then
+        AuraButton.Text = "AURA SPAM: ON"
+        AuraButton.BackgroundColor3 = Color3.fromRGB(40, 167, 69)
+    else
+        AuraButton.Text = "AURA SPAM: OFF"
+        AuraButton.BackgroundColor3 = Color3.fromRGB(220, 53, 69)
+    end
+end)
+
+----------------------------------------------------
 -- NÚT BẤM NÉ - AUTO NÉ LÊN ĐẦU & LƯỚT BÁM ĐUÔI MƯỢT MÀ CHUẨN TỐC ĐỘ 30
 ----------------------------------------------------
 
@@ -414,7 +443,7 @@ local TargetPlayer = nil
 local DodgeButton = Instance.new("TextButton")
 DodgeButton.Parent = Container
 DodgeButton.Size = UDim2.new(1, 0, 0, 28)
-DodgeButton.Position = UDim2.new(0, 0, 0, 240)
+DodgeButton.Position = UDim2.new(0, 0, 0, 230)
 DodgeButton.BackgroundColor3 = Color3.fromRGB(220, 53, 69)
 DodgeButton.Text = "Bám Né: OFF"
 DodgeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -572,6 +601,22 @@ task.spawn(function()
     end
 end)
 
+----------------------------------------------------
+-- VÒNG LẶP AURA SPAM (MỚI)
+----------------------------------------------------
+task.spawn(function()
+    while task.wait(1) do
+        if AuraSpamEnabled then
+            pcall(function()
+                if ActionRemote then
+                    ActionRemote:FireServer("Aura Farm")
+                end
+            end)
+        end
+    end
+end)
+
+-- VÒNG LẶP CHẠY NHANH VÀ NHẢY CAO
 RunService.Heartbeat:Connect(function()
     if LocalPlayer.Character then
         local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
@@ -611,4 +656,4 @@ UserInputService.InputBegan:Connect(function(input, gpe)
     end
 end)
 
-print("✓ Script vip.3.lua + Bám Né Mượt 30 studs/s đã sẵn sàng!")
+print("✓ Script vip.3.lua + Bám Né Mượt 30 studs/s + AURA SPAM đã sẵn sàng!")
