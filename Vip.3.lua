@@ -481,85 +481,64 @@ UserInputService.InputBegan:Connect(function(input, gpe)
     end
 end)
 
--- SCRIPT AUTO DODGE LƯỚT XA - GAME CUỘC SỐNG KHÓ KHĂN
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-local RunService = game:GetService("RunService")
-local CoreGui = game:GetService("CoreGui")
-
--- CẤU HÌNH KHOẢNG CÁCH LƯỚT XA (ĐÃ TĂNG)
+-- FAR-RANGE DODGE: configuration and integration into main menu
 local DodgeDistance = 24    -- Khoảng cách bắt đầu phát hiện đối thủ (studs)
-local DodgeSpeed = 155      -- Lực lướt mạnh hơn rất nhiều để dạt ra thật xa
-local DodgeCooldown = 0.45  -- Thời gian chờ để nhân vật lướt hết tầm, tránh bị khựng
+local DodgeSpeed = 155      -- Lực lướt mạnh để dạt ra thật xa
+local DodgeCooldown = 0.45  -- Thời gian chờ để nhân vật lướt hết tầm
 local IsDoggling = false
-local DodgeEnabled = true  
+local DodgeEnabled = false
 
--- 1. MENU GIAO DIỆN
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "FarRangeDodge_" .. math.random(10000, 99999)
-ScreenGui.Parent = CoreGui
-ScreenGui.ResetOnSpawn = false
+-- Add a button labeled "Né" into the main menu (Container)
+local DodgeButton = Instance.new("TextButton")
+DodgeButton.Parent = Container
+DodgeButton.Size = UDim2.new(1, 0, 0, 28)
+DodgeButton.Position = UDim2.new(0, 0, 0, 240)
+DodgeButton.BackgroundColor3 = Color3.fromRGB(220, 53, 69)
+DodgeButton.Text = "Né: OFF"
+DodgeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+DodgeButton.Font = Enum.Font.SourceSansBold
+DodgeButton.TextSize = 14
+Instance.new("UICorner", DodgeButton).CornerRadius = UDim.new(0, 7)
 
-local ToggleButton = Instance.new("TextButton")
-ToggleButton.Name = "Toggle"
-ToggleButton.Parent = ScreenGui
-ToggleButton.BackgroundColor3 = Color3.fromRGB(40, 167, 69)
-ToggleButton.Position = UDim2.new(0.05, 0, 0.45, 0)
-ToggleButton.Size = UDim2.new(0, 140, 0, 45)
-ToggleButton.Font = Enum.Font.SourceSansBold
-ToggleButton.Text = "FAR DODGE: ON"
-ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-ToggleButton.TextSize = 14
-ToggleButton.Active = true
-ToggleButton.Draggable = true
-
-local UICorner = Instance.new("UICorner")
-UICorner.CornerRadius = UDim.new(0, 8)
-UICorner.Parent = ToggleButton
-
-ToggleButton.MouseButton1Click:Connect(function()
+DodgeButton.MouseButton1Click:Connect(function()
     DodgeEnabled = not DodgeEnabled
     if DodgeEnabled then
-        ToggleButton.Text = "FAR DODGE: ON"
-        ToggleButton.BackgroundColor3 = Color3.fromRGB(40, 167, 69)
+        DodgeButton.Text = "Né: ON"
+        DodgeButton.BackgroundColor3 = Color3.fromRGB(40, 167, 69)
     else
-        ToggleButton.Text = "FAR DODGE: OFF"
-        ToggleButton.BackgroundColor3 = Color3.fromRGB(220, 53, 69)
+        DodgeButton.Text = "Né: OFF"
+        DodgeButton.BackgroundColor3 = Color3.fromRGB(220, 53, 69)
         IsDoggling = false
     end
 end)
 
--- 2. CƠ CHẾ LƯỚT NÉ KHOẢNG CÁCH XA
+-- Dodge logic uses existing Players/RunService/LocalPlayer; only runs when DodgeEnabled
 RunService.Heartbeat:Connect(function()
     if not DodgeEnabled or IsDoggling or not LocalPlayer.Character then return end
-    
+
     local myHrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
     local myHumanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
     if not myHrp or not myHumanoid or myHumanoid.Health <= 0 then return end
-    
+
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer and player.Character then
             local enemyHrp = player.Character:FindFirstChild("HumanoidRootPart")
             local enemyHumanoid = player.Character:FindFirstChildOfClass("Humanoid")
-            
+
             if enemyHrp and enemyHumanoid and enemyHumanoid.Health > 0 then
                 local distance = (myHrp.Position - enemyHrp.Position).Magnitude
-                
-                -- Kích hoạt lướt xa khi đối thủ vào vùng quét
+
                 if distance <= DodgeDistance then
                     IsDoggling = true
-                    
-                    -- Xác định hướng dạt sang trái hoặc phải để thoát thân nhanh nhất
+
                     local sideDirection = (math.random(1, 2) == 1) and myHrp.CFrame.RightVector or -myHrp.CFrame.RightVector
-                    
-                    -- Đẩy cơ thể đi một khoảng cách lớn bằng xung lực vật lý mới
+
                     myHrp.AssemblyLinearVelocity = Vector3.new(
-                        sideDirection.X * DodgeSpeed, 
-                        myHrp.AssemblyLinearVelocity.Y, 
+                        sideDirection.X * DodgeSpeed,
+                        myHrp.AssemblyLinearVelocity.Y,
                         sideDirection.Z * DodgeSpeed
                     )
-                    
-                    -- Chờ một khoảng ngắn để lực đẩy thực hiện xong trước khi nhận lệnh lướt tiếp theo
+
                     task.wait(DodgeCooldown)
                     IsDoggling = false
                     break
@@ -569,4 +548,4 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
-print("Chế độ tự động né dạt ra xa đã được kích hoạt!")
+print("Chế độ tự động né dạt ra xa đã được tích hợp vào menu (bấm 'Né' để bật/tắt).")
